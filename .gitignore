@@ -1,0 +1,12 @@
+# Local secrets and environment configuration (NEVER commit)
+config.local.js
+.env
+.env.*
+
+# OS and editor artifacts
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+node_modules/
