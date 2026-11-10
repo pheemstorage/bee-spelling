@@ -2756,6 +2756,7 @@ Rules:
        ======================================================================== */
     const ConfigVault = (function () {
       const VAULT_KEY = 'bee_vault_secrets_v1';
+      const DEFAULT_BRIDGE_URL = 'https://script.google.com/macros/s/AKfycbxmn8WSRcBZr-PkaGF2C75p97cv1f77nX8IGYba0ea6Io3EZI61O2KzpQcmT7VZxk2fGA/exec';
 
       function getLocalFileConfig() {
         const cfg = window.BEE_LOCAL_CONFIG;
@@ -2806,7 +2807,7 @@ Rules:
         const localTtsModel = String(local.GEMINI_TTS_MODEL || '').trim();
 
         const geminiKey = localKey || String(vault.geminiKey || '').trim();
-        const bridgeUrl = localBridge || String(vault.bridgeUrl || '').trim();
+        const bridgeUrl = localBridge || String(vault.bridgeUrl || '').trim() || DEFAULT_BRIDGE_URL;
         const driveFolderUrl = localFolderUrl || String(vault.driveFolderUrl || '').trim();
         const textModelOverride = localTextModel || String(vault.textModel || '').trim();
         const ttsModelOverride = localTtsModel || String(vault.ttsModel || '').trim();
@@ -2824,7 +2825,7 @@ Rules:
           ttsModelOverride,
           sources: {
             keyFromLocalFile: Boolean(localKey),
-            bridgeFromLocalFile: Boolean(localBridge),
+            bridgeFromLocalFile: Boolean(localBridge || (!vault.bridgeUrl && DEFAULT_BRIDGE_URL)),
             folderFromLocalFile: Boolean(localFolderUrl)
           }
         };
@@ -6910,12 +6911,22 @@ Rules:
             )
           )
         ),
-        el('div', { className: 'hub-cta-actions' },
+        el('div', { className: 'hub-cta-actions', style: { display: 'flex', gap: '0.6rem', flexWrap: 'wrap' } },
           el('button', {
             type: 'button',
             className: 'btn3d btn-green btn-lg',
+            style: { flex: '1 1 200px' },
             onClick: () => openUnitModal(null)
-          }, createIcon3D('plus', 22), el('span', {}, 'Create New Unit'))
+          }, createIcon3D('plus', 22), el('span', {}, 'Create New Unit')),
+          el('button', {
+            type: 'button',
+            className: 'btn3d btn-blue btn-lg',
+            style: { flex: '1 1 180px' },
+            onClick: () => {
+              showToast('Syncing with Google Drive...', 2500);
+              DriveSyncManager.runSyncCycle({ pullManifest: true, forceAll: true });
+            }
+          }, createIcon3D('cloud', 22), el('span', {}, 'Sync Google Drive'))
         )
       );
       container.appendChild(ctaBar);
@@ -9901,6 +9912,14 @@ Rules:
     window.addEventListener('unhandledrejection', (ev) => {
       console.error('Bee Spelling unhandled rejection:', ev.reason);
       if (ev && typeof ev.preventDefault === 'function') ev.preventDefault();
+    });
+
+    window.addEventListener('hashchange', () => {
+      const imported = ConfigVault.consumeSetupHashOnBoot();
+      if (imported) {
+        showToast('Google Drive Sync Bridge configured from Link!', 3500);
+        DriveSyncManager.runSyncCycle({ pullManifest: true, forceAll: true });
+      }
     });
 
     function bootApp() {
